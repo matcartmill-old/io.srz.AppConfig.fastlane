@@ -76,7 +76,7 @@ module Fastlane
           src = "#{Dir.pwd}/#{file}"
           FileUtils.mkdir_p(File.dirname(dst))
           FileUtils.cp(src, dst)
-          match.gitcrypt_encrypt(path: dst, password: passphrase)
+          match.appconfig_encrypt(path: dst, password: passphrase)
         end
       end
 

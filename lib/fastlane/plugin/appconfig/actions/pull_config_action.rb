@@ -72,7 +72,7 @@ module Fastlane
         files.each do |file|
           src = "#{source}/#{file}"
           dst = "#{Dir.pwd}/#{file}"
-          match.gitcrypt_decrypt(path: src, password: passphrase)
+          match.appconfig_decrypt(path: src, password: passphrase)
           FileUtils.cp(src, dst)
         end
       end
