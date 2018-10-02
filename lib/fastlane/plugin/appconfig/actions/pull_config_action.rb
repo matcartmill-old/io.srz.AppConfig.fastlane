@@ -2,7 +2,6 @@ require 'fastlane/action'
 require 'fileutils'
 require 'git'
 require 'match'
-require 'pry-byebug'
 require 'terminal-table'
 require_relative '../helper/appconfig_helper'
 
