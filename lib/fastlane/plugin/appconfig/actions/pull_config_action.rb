@@ -41,7 +41,7 @@ module Fastlane
         # Clone the repo
         git_name = git_repo.split('/').last
         git = Git.clone(git_repo, git_name, path: @@tmp_dir)
-        git.branch(git_ref).checkout
+        git.checkout(git_ref)
 
         # Bundled files
         bundled_src = "#{@@tmp_dir}/#{git_name}/#{bundle_id}"

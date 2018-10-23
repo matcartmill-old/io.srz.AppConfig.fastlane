@@ -40,7 +40,13 @@ module Fastlane
         # Clone the repo
         git_name = git_repo.split('/').last
         git = Git.clone(git_repo, git_name, path: @@tmp_dir)
-        git.branch(git_ref).checkout
+        begin
+          git.checkout(git_ref)
+          UI.messages "Checking out #{git_ref}"
+        rescue
+          git.branch(git_ref).checkout
+          UI.message "Creating new branch #{git_ref}"
+        end
 
         # Bundled files
         bundled_dst = "#{@@tmp_dir}/#{git_name}/#{bundle_id}"
@@ -55,7 +61,7 @@ module Fastlane
         # Commit the changes
         git.add
         git.commit "[AppConfig] Updating files for #{bundle_id}"
-        git.push(git.remote('origin'))
+        git.push(git.remote('origin'), git.branch(git_ref))
         remove_tmp_dir_if_exists
       end
 

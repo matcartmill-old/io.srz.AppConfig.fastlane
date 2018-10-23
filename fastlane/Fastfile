@@ -1,38 +1,36 @@
 @bundled_files = []
 @bundled_encrypted_files = []
-@common_files = []
+@common_files = [
+  'spec/resources/Foo.swift'
+]
 @common_encrypted_files = []
 
 @git_repo = 'git@github.com:bsarrazin/io.srz.SkunkTrail.ios.AppConfig.git'
 @git_ref = 'master'
-@passphrase = ENV['APPCONFIG_PASSPHRASE']
+@passphrase = 'APPCONFIG_PASSPHRASE'
 
-def push(bundle_id)
+lane :push do |options|
   push_config(
-    bundle_id: bundle_id,
+    bundle_id: options[:bundle_id],
     bundled_files: @bundled_files,
     bundled_encrypted_files: @bundled_encrypted_files,
     common_files: @common_files,
     common_encrypted_files: @common_encrypted_files,
     git_repo: @git_repo,
-    git_ref: @git_ref,
+    git_ref: options[:git_ref],
     passphrase: @passphrase
   )
 end
 
-def pull(bundle_id)
+lane :pull do |options|
   pull_config(
-    bundle_id: bundle_id,
+    bundle_id: options[:bundle_id],
     bundled_files: @bundled_files,
     bundled_encrypted_files: @bundled_encrypted_files,
     common_files: @common_files,
     common_encrypted_files: @common_encrypted_files,
     git_repo: @git_repo,
-    git_ref: @git_ref,
+    git_ref: options[:git_ref],
     passphrase: @passphrase
   )
-end
-
-lane :test do
-  appconfig
 end
