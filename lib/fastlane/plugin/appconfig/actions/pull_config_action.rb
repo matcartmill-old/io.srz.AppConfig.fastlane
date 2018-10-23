@@ -1,7 +1,6 @@
 require 'fastlane/action'
 require 'fileutils'
 require 'git'
-require 'match'
 require 'terminal-table'
 require_relative '../helper/appconfig_helper'
 
@@ -10,7 +9,6 @@ module Fastlane
 
     class PullConfigAction < Action
 
-      @@match = Match::Encrypt.new
       @@tmp_dir = "#{Dir.pwd}/.tmp"
 
       def self.run(params)
@@ -43,7 +41,7 @@ module Fastlane
         # Clone the repo
         git_name = git_repo.split('/').last
         git = Git.clone(git_repo, git_name, path: @@tmp_dir)
-        git.checkout(git_ref)
+        git.branch(git_ref).checkout
 
         # Bundled files
         bundled_src = "#{@@tmp_dir}/#{git_name}/#{bundle_id}"
@@ -68,11 +66,10 @@ module Fastlane
       end
 
       def self.copy_and_decrypt_files(files, source, passphrase)
-        match = Match::Encrypt.new
         files.each do |file|
           src = "#{source}/#{file}"
           dst = "#{Dir.pwd}/#{file}"
-          match.appconfig_decrypt(path: src, password: passphrase)
+          decrypt(path: src, password: passphrase)
           FileUtils.cp(src, dst)
         end
       end
@@ -160,6 +157,31 @@ module Fastlane
 
       def self.is_supported?(platform)
         true
+      end
+
+      # Stolen from Fastlane repo
+      # The encryption parameters in this implementations reflect the old behaviour which depended on the users' local OpenSSL version
+      # 1.0.x OpenSSL and earlier versions use MD5, 1.1.0c and newer uses SHA256, we try both before giving an error
+      def self.decrypt(path: nil, password: nil, hash_algorithm: "MD5")
+        stored_data = Base64.decode64(File.read(path))
+        salt = stored_data[8..15]
+        data_to_decrypt = stored_data[16..-1]
+
+        decipher = OpenSSL::Cipher.new('AES-256-CBC')
+        decipher.decrypt
+        decipher.pkcs5_keyivgen(password, salt, 1, hash_algorithm)
+
+        decrypted_data = decipher.update(data_to_decrypt) + decipher.final
+
+        File.binwrite(path, decrypted_data)
+        rescue => error
+          fallback_hash_algorithm = "SHA256"
+          if hash_algorithm != fallback_hash_algorithm
+            decrypt(path, password, fallback_hash_algorithm)
+        else
+          UI.error(error.to_s)
+          UI.crash!("Error decrypting '#{path}'")
+        end
       end
     end
   end

@@ -1,7 +1,6 @@
 require 'fastlane/action'
 require 'fileutils'
 require 'git'
-require 'match'
 require 'terminal-table'
 require_relative '../helper/appconfig_helper'
 
@@ -41,7 +40,7 @@ module Fastlane
         # Clone the repo
         git_name = git_repo.split('/').last
         git = Git.clone(git_repo, git_name, path: @@tmp_dir)
-        git.checkout(git_ref)
+        git.branch(git_ref).checkout
 
         # Bundled files
         bundled_dst = "#{@@tmp_dir}/#{git_name}/#{bundle_id}"
@@ -56,7 +55,7 @@ module Fastlane
         # Commit the changes
         git.add
         git.commit "[AppConfig] Updating files for #{bundle_id}"
-        git.push(git.remote('origin'), git.branch(git_ref))
+        git.push(git.remote('origin'))
         remove_tmp_dir_if_exists
       end
 
@@ -70,13 +69,12 @@ module Fastlane
       end
 
       def self.copy_and_encrypt_files(files, destination, passphrase)
-        match = Match::Encrypt.new
         files.each do |file|
           dst = "#{destination}/#{file}"
           src = "#{Dir.pwd}/#{file}"
           FileUtils.mkdir_p(File.dirname(dst))
           FileUtils.cp(src, dst)
-          match.appconfig_encrypt(path: dst, password: passphrase)
+          encrypt(path: dst, password: passphrase)
         end
       end
 
@@ -163,6 +161,32 @@ module Fastlane
 
       def self.is_supported?(platform)
         true
+      end
+
+      # Stolen from Fastlane
+      # We encrypt with MD5 because that was the most common default value in older fastlane versions which used the local OpenSSL installation
+      # A more secure key and IV generation is needed in the future
+      # IV should be randomly generated and provided unencrypted
+      # salt should be randomly generated and provided unencrypted (like in the current implementation)
+      # key should be generated with OpenSSL::KDF::pbkdf2_hmac with properly chosen parameters
+      # Short explanation about salt and IV: https://stackoverflow.com/a/1950674/6324550
+      def self.encrypt(path: nil, password: nil)
+        UI.user_error!("No password supplied") if password.to_s.strip.length == 0
+
+        data_to_encrypt = File.read(path)
+        salt = SecureRandom.random_bytes(8)
+
+        cipher = OpenSSL::Cipher.new('AES-256-CBC')
+        cipher.encrypt
+        cipher.pkcs5_keyivgen(password, salt, 1, "MD5")
+        encrypted_data = "Salted__" + salt + cipher.update(data_to_encrypt) + cipher.final
+
+        File.write(path, Base64.encode64(encrypted_data))
+        rescue FastlaneCore::Interface::FastlaneError
+          raise
+        rescue => error
+          UI.error(error.to_s)
+          UI.crash!("Error encrypting '#{path}'")
       end
     end
   end

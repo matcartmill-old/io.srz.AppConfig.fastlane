@@ -14,14 +14,3 @@ module Fastlane
     end
   end
 end
-
-module Match
-  class Encrypt
-    def appconfig_encrypt(path: nil, password: nil)
-      encrypt(path: path, password: password)
-    end
-    def appconfig_decrypt(path: nil, password: nil)
-      decrypt(path: path, password: password)
-    end
-  end
-end
